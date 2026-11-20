@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TOProadmap: a Claude skill that plans your route</title>
+<meta name="description" content="A Claude skill that turns “I want to learn X” into a detailed, realistic, stage-by-stage roadmap.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#070D1A;--bg-rgb:7,13,26;--surface:#0F1A2E;--surface-2:#16243D;--line:#243553;--ink:#EAF1FB;--ink-rgb:234,241,251;--muted:#93A5C2;--route:#4D7CFF;--route-rgb:77,124,255;--route-glow:#7FA2FF;--stop:#FFB820;--stop-rgb:255,184,32;--ok:#34D399;--on-route:#FFFFFF;--code-bg:#050A14;--code-ink:#DCE8FA;--grad:linear-gradient(90deg,var(--route),var(--route-glow) 55%,var(--stop));
+--fd:"Bricolage Grotesque",Figtree,system-ui,sans-serif;--fb:Figtree,system-ui,-apple-system,sans-serif;
+color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#EEF3F8;--bg-rgb:238,243,248;--surface:#FFFFFF;--surface-2:#E4ECF6;--line:#C4D2E4;--ink:#0F1E36;--ink-rgb:15,30,54;--muted:#4F6280;--route:#2F5BFF;--route-rgb:47,91,255;--route-glow:#5B82FF;--stop:#E89A00;--stop-rgb:232,154,0;--code-bg:#0F1E36;--code-ink:#E6EEF8;color-scheme:light}}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:smooth;height:100%}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 18px/1.6 var(--fb);overflow-x:hidden}
+h1,h2,h3{font-family:var(--fd);margin:0;font-weight:800}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--route-glow);outline-offset:3px;border-radius:8px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 clamp(20px,4vw,48px)}
+/* spine */
+.spine{position:fixed;left:10px;top:0;bottom:0;width:3px;background:var(--line);z-index:5;pointer-events:none}
+.spine i{position:absolute;inset:0;background:var(--grad);transform:scaleY(var(--p,0));transform-origin:top}
+/* nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:10;padding:calc(env(safe-area-inset-top,0px) + 14px) 0 14px;transition:background .3s,border-color .3s;border-bottom:1px solid transparent}
+nav.scrolled{background:rgba(var(--bg-rgb),.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-color:var(--line)}
+nav .wrap{display:flex;justify-content:space-between;align-items:center}
+.logo{font:800 22px var(--fd);text-decoration:none;letter-spacing:-.02em}
+nav div{display:flex;gap:24px;font-weight:500}
+nav div a{text-decoration:none;color:var(--muted);padding:10px 4px}nav div a:hover{color:var(--ink)}
+/* hero */
+.hero{position:relative;min-height:100svh;display:flex;align-items:center;overflow:hidden}
+#gl{position:absolute;inset:0;width:100%;height:100%;opacity:.75}
+.hero:before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 20% 80%,rgba(var(--route-rgb),.25),transparent 60%),linear-gradient(transparent 55%,var(--bg))}
+.hero .wrap{position:relative;padding-top:110px;padding-bottom:70px}
+h1{font-size:clamp(52px,10vw,140px);line-height:.95;letter-spacing:-.04em}
+h1 .l{display:block;overflow:hidden;padding-bottom:.08em}
+h1 .l span{display:inline-block;transform:translateY(105%);animation:up 1s cubic-bezier(.2,.8,.2,1) forwards}
+h1 .l:nth-child(2) span{animation-delay:.12s}h1 .l:nth-child(3) span{animation-delay:.24s}
+h1 .g{background:var(--grad);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:up 1s .24s cubic-bezier(.2,.8,.2,1) forwards,flow 6s linear infinite}
+@keyframes up{to{transform:none}}@keyframes flow{to{background-position:200% 0}}
+.lead{font-size:clamp(18px,2vw,22px);color:var(--muted);max-width:520px;margin:28px 0 34px}
+.btns{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;min-height:48px;padding:0 26px;border-radius:14px;font:600 16px var(--fb);text-decoration:none;border:2px solid var(--ink);background:transparent;color:var(--ink);transition:transform .2s,box-shadow .2s;will-change:transform}
+.btn.main{background:var(--route);border-color:var(--route);color:var(--on-route)}
+.btn:hover{box-shadow:0 10px 30px -8px rgba(var(--route-rgb),.6)}
+.btn:active{filter:brightness(.92)}
+/* marquee */
+.marq{overflow:hidden;border-block:1px solid var(--line);padding:26px 0;background:var(--surface)}
+.marq div{display:flex;width:max-content;animation:m 28s linear infinite;font:800 clamp(40px,7vw,96px)/1 var(--fd);letter-spacing:-.03em;white-space:nowrap}
+.marq span{padding-right:.5em}.marq b{color:var(--stop);font-weight:800}
+@keyframes m{to{transform:translateX(-50%)}}
+/* sections */
+section{padding:clamp(96px,14vw,180px) 0}
+h2{font-size:clamp(36px,6vw,80px);line-height:1;letter-spacing:-.03em}
+h2 .c{display:inline-block;will-change:transform}
+.sub{color:var(--muted);max-width:560px;margin:18px 0 0}
+/* roadmap pin */
+#plan{padding:0;border-top:1px solid var(--line)}
+.pin{min-height:100svh;display:grid;grid-template-columns:1fr 1.1fr;gap:clamp(24px,5vw,80px);align-items:center;padding:100px 0 40px}
+.count{font:800 clamp(64px,10vw,140px)/1 var(--fd);color:var(--stop);letter-spacing:-.04em;margin-top:28px}
+.count small{font-size:.28em;color:var(--muted)}
+.bar{height:6px;border-radius:3px;background:var(--line);margin-top:14px;max-width:320px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--grad);transform:scaleX(var(--s,.17));transform-origin:left}
+.stack{position:relative;min-height:330px}
+.step{position:absolute;inset:0 0 auto 0;opacity:0;transform:translateY(40px) scale(.97);transition:opacity .5s,transform .5s;pointer-events:none}
+.step.on{opacity:1;transform:none;pointer-events:auto}
+.step.past{transform:translateY(-40px) scale(.97)}
+.step h3{font-size:clamp(28px,3.4vw,44px);margin-bottom:12px}
+.step p{margin:0;color:var(--muted)}
+.card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:30px;overflow:hidden}
+.card:before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s;background:radial-gradient(360px circle at var(--mx,50%) var(--my,50%),rgba(var(--route-rgb),.25),transparent 60%)}
+.card:hover{border-color:var(--route)}.card:hover:before{opacity:1}
+/* bento */
+.bento{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-top:48px}
+.chip{text-align:left;font:600 clamp(20px,2.4vw,30px)/1.2 var(--fd);color:var(--ink);cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;gap:28px;min-height:190px;transform-style:preserve-3d;transition:transform .2s ease-out}
+.chip:nth-child(1){grid-column:span 4}.chip:nth-child(2){grid-column:span 2}.chip:nth-child(3){grid-column:span 2}.chip:nth-child(4){grid-column:span 4}
+.chip small{font:600 14px var(--fb);color:var(--route-glow);display:flex;align-items:center;gap:8px;position:relative}
+.chip .needle{display:inline-block;transition:transform .6s cubic-bezier(.3,1.6,.5,1)}
+.chip.done small{color:var(--ok)}.chip.done .needle{transform:rotate(360deg)}
+.chip.done small:after{content:"Heading north.";color:var(--ok)}
+.spark{position:fixed;width:6px;height:6px;border-radius:50%;background:var(--stop);pointer-events:none;z-index:50}
+/* install */
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:40px 0 20px}
+.tab{min-height:44px;padding:0 20px;border-radius:999px;border:2px solid var(--line);background:transparent;font:600 16px var(--fb);color:var(--muted);cursor:pointer;transition:border-color .2s,color .2s}
+.tab:hover{border-color:var(--route);color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.panel{max-width:780px;animation:fade .4s}.panel[hidden]{display:none}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}}
+.panel ol{margin:0 0 0 22px;padding:0}.panel li{margin:0 0 10px}
+.panel p{margin:0 0 14px;color:var(--muted)}
+.code{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;background:var(--code-bg);color:var(--code-ink);border:1px solid var(--line);border-radius:14px;padding:16px;margin:10px 0 4px;overflow-x:auto}
+.code code{font:500 14.5px/1.55 ui-monospace,Menlo,Consolas,monospace;white-space:pre}
+.copy{flex:none;min-height:36px;background:transparent;border:1px solid var(--line);color:var(--code-ink);border-radius:8px;padding:0 12px;font:600 13px var(--fb);cursor:pointer}
+.copy:hover{border-color:var(--route-glow)}.copy:active{transform:scale(.95)}
+.note{font-size:15px;color:var(--muted);margin-top:14px}
+code{font-size:.9em}
+/* faq */
+details{border-bottom:1px solid var(--line);padding:22px 0;max-width:760px}
+summary{font:800 clamp(20px,2.4vw,26px) var(--fd);cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:16px}
+summary::-webkit-details-marker{display:none}
+summary:after{content:"+";color:var(--route-glow);transition:transform .25s}
+details[open] summary:after{transform:rotate(45deg)}
+summary:hover{color:var(--route-glow)}
+details p{margin:12px 0 0;color:var(--muted)}
+details p a{color:var(--route-glow)}
+/* footer */
+footer{padding:120px 0 64px;border-top:1px solid var(--line);color:var(--muted);font-size:15px;text-align:center}
+.dest{font:800 clamp(28px,5vw,56px)/1.05 var(--fd);color:var(--ink);letter-spacing:-.03em;margin-bottom:28px}
+.dest:before{content:"";display:block;width:26px;height:26px;border-radius:50%;background:var(--stop);margin:0 auto 24px;box-shadow:0 0 30px rgba(var(--stop-rgb),.6);animation:pulse 2.4s infinite}
+@keyframes pulse{50%{transform:scale(1.35)}}
+/* responsive */
+@media (max-width:899px){.pin{grid-template-columns:1fr;min-height:0;padding:96px 0 64px}.stack{min-height:0}.step{position:static;opacity:1;transform:none;margin-bottom:24px;pointer-events:auto}.count,.bar{display:none}.bento{grid-template-columns:1fr}.chip:nth-child(n){grid-column:auto}}
+@media (max-width:699px){.spine{left:4px;width:2px}nav div{gap:12px}.marq div{animation-duration:20s}}
+@media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}h1 .l span,h1 .g{transform:none}.marq div{transform:none}.spine i{transform:scaleY(1)}}
+</style>
+</head>
+<body>
+<div class="spine" aria-hidden="true"><i></i></div>
+<nav id="nav"><div class="wrap"><a class="logo" href="#top">TOProadmap</a><div><a href="#install">Install</a><a href="#github">GitHub</a></div></div></nav>
+
+<header class="hero" id="top">
+<canvas id="gl" aria-hidden="true"></canvas>
+<div class="wrap">
+<h1 aria-label="Say what you want to learn. Get the route."><span class="l" aria-hidden="true"><span>Say what you</span></span><span class="l" aria-hidden="true"><span>want to learn.</span></span><span class="l" aria-hidden="true"><span>Get <em class="g" style="font-style:normal">the route.</em></span></span></h1>
+<p class="lead">TOProadmap is a skill for Claude. It turns “I want to learn X” into a detailed, realistic plan with stages, resources, projects, and checkpoints.</p>
+<div class="btns"><a class="btn main mag" href="#install">Install the skill</a><a class="btn mag" href="#github">View on GitHub</a></div>
+</div>
+</header>
+
+<div class="marq" aria-hidden="true"><div><span>Start <b>→</b> Foundations <b>→</b> Core skills <b>→</b> Projects <b>→</b> Mastery <b>●</b></span><span>Start <b>→</b> Foundations <b>→</b> Core skills <b>→</b> Projects <b>→</b> Mastery <b>●</b></span></div></div>
+
+<section id="plan">
+<div class="wrap pin">
+<div>
+<h2>What every roadmap contains</h2>
+<p class="sub">The same six parts each time, so you always know where you are and what to do next.</p>
+<div class="count" aria-hidden="true"><span id="num">1</span><small> / 6</small></div>
+<div class="bar" aria-hidden="true"><i id="bar"></i></div>
+</div>
+<ol class="stack" style="list-style:none;margin:0;padding:0">
+<li class="step on card"><h3>Snapshot</h3><p>Your goal, the assumptions made about your level and time, the total duration, and what you’ll be able to do at the end.</p></li>
+<li class="step card"><h3>The big picture</h3><p>Four to six stages in a quick overview, each with a time estimate.</p></li>
+<li class="step card"><h3>Stage-by-stage plan</h3><p>For each stage: the objective, what to learn, specific resources, a hands-on project, a milestone check, and common mistakes.</p></li>
+<li class="step card"><h3>First 7 days</h3><p>A concrete start you can begin today.</p></li>
+<li class="step card"><h3>Tracking and staying on course</h3><p>How to measure progress and what to do when you fall behind.</p></li>
+<li class="step card"><h3>After the roadmap</h3><p>Where to go next: specialties, communities, and ways to use the skill.</p></li>
+</ol>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<h2>Just ask</h2>
+<p class="sub">No special command needed. Describe what you want, or tap one to copy it.</p>
+<div class="bento">
+<button class="card chip" data-copy="I want to learn Python from zero. I have 6 hours a week."><span>I want to learn Python from zero. I have 6 hours a week.</span><small><span class="needle">🧭</span>Copy</small></button>
+<button class="card chip" data-copy="Give me a roadmap to become a UX designer in 8 months."><span>Give me a roadmap to become a UX designer in 8 months.</span><small><span class="needle">🧭</span>Copy</small></button>
+<button class="card chip" data-copy="How do I start running and finish a 10K?"><span>How do I start running and finish a 10K?</span><small><span class="needle">🧭</span>Copy</small></button>
+<button class="card chip" data-copy="TOProadmap: launch an online store with a small budget."><span>TOProadmap: launch an online store with a small budget.</span><small><span class="needle">🧭</span>Copy</small></button>
+</div>
+</div>
+</section>
+
+<section id="install" style="border-top:1px solid var(--line)">
+<div class="wrap">
+<h2>Install it</h2>
+<p class="sub">Pick where you use Claude. It takes about a minute.</p>
+<div class="tabs" role="tablist">
+<button class="tab" role="tab" aria-selected="true" aria-controls="p1" id="t1">Claude app</button>
+<button class="tab" role="tab" aria-selected="false" aria-controls="p2" id="t2">Claude Code</button>
+<button class="tab" role="tab" aria-selected="false" aria-controls="p3" id="t3">From the repo</button>
+</div>
+<div class="panel card" id="p1" role="tabpanel" aria-labelledby="t1">
+<ol>
+<li>Download <strong>toproadmap.skill</strong> from the <code>dist</code> folder of the GitHub repo.</li>
+<li>In Claude, open <strong>Settings → Capabilities → Skills</strong>.</li>
+<li>Choose <strong>Upload skill</strong> and select the file.</li>
+<li>Switch it on, then start a chat with something like “I want to learn guitar.”</li>
+</ol>
+<p class="note">Skills need code execution and file creation to be enabled, and menu names can change. If you don’t see Skills, check Anthropic’s help center.</p>
+</div>
+<div class="panel card" id="p2" role="tabpanel" aria-labelledby="t2" hidden>
+<p>Clone the repo straight into your skills folder. This makes it available in every project:</p>
+<div class="code"><code>git clone https://github.com/dalil2005/toproadmap ~/.claude/skills/toproadmap</code><button class="copy">Copy</button></div>
+<p class="note">For one project only, clone into <code>.claude/skills/toproadmap</code> inside that project. Restart Claude Code, then ask for a roadmap.</p>
+</div>
+<div class="panel card" id="p3" role="tabpanel" aria-labelledby="t3" hidden>
+<p>The skill is one file. Copy it into a folder named <code>toproadmap</code>:</p>
+<div class="code"><code>mkdir toproadmap
+curl -o toproadmap/SKILL.md https://raw.githubusercontent.com/dalil2005/toproadmap/main/SKILL.md</code><button class="copy">Copy</button></div>
+<p class="note">Zip the folder if you want to upload it in the Claude app.</p>
+</div>
+</div>
+</section>
+
+<section id="github" style="border-top:1px solid var(--line)">
+<div class="wrap">
+<h2>Questions</h2>
+<div style="margin-top:40px">
+<details><summary>Is it free?</summary><p>The skill is free and open source under the MIT license. You need a Claude plan that supports skills.</p></details>
+<details><summary>Can I change how roadmaps look?</summary><p>Yes. Open SKILL.md in any text editor and edit the structure, tone, or rules. It’s plain Markdown.</p></details>
+<details><summary>Are the resources real?</summary><p>The skill tells Claude to search the web for fast-changing topics and never to invent courses or links.</p></details>
+<details><summary>Where’s the code?</summary><p>On GitHub: <a href="https://github.com/dalil2005/toproadmap">github.com/dalil2005/toproadmap</a>. Stars, issues, and pull requests are welcome.</p></details>
+</div>
+</div>
+</section>
+
+<footer>
+<div class="wrap">
+<p class="dest">You’ve reached the destination.<br>Now go learn something.</p>
+TOProadmap is an independent community skill for Claude. MIT license.<br>Motion effects inspired by <a href="https://github.com/DavidHDev/vue-bits">vue-bits</a> by DavidHDev (MIT).
+</div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+var RM=matchMedia('(prefers-reduced-motion:reduce)').matches,HOVER=matchMedia('(hover:hover)').matches;
+var $=function(s){return[].slice.call(document.querySelectorAll(s))};
+/* nav + spine progress (rAF throttled) */
+var nav=document.getElementById('nav'),sp=document.querySelector('.spine'),tk=false;
+function upd(){tk=false;var y=scrollY,h=document.documentElement.scrollHeight-innerHeight;nav.classList.toggle('scrolled',y>40);sp.style.setProperty('--p',h>0?y/h:0)}
+addEventListener('scroll',function(){if(!tk){tk=true;requestAnimationFrame(upd)}},{passive:true});upd();
+/* tabs */
+var tabs=$('.tab');
+tabs.forEach(function(t){t.addEventListener('click',function(){tabs.forEach(function(x){var on=x===t;x.setAttribute('aria-selected',on);document.getElementById(x.getAttribute('aria-controls')).hidden=!on})})});
+/* copy + spark + compass */
+function copy(txt,el,cb){try{navigator.clipboard.writeText(txt).then(cb,cb)}catch(e){cb()}}
+function spark(x,y){if(RM)return;for(var i=0;i<10;i++){var s=document.createElement('i');s.className='spark';s.style.left=x+'px';s.style.top=y+'px';document.body.appendChild(s);var a=i/10*6.283,d=34+Math.random()*30;s.animate([{transform:'translate(0,0)',opacity:1},{transform:'translate('+Math.cos(a)*d+'px,'+Math.sin(a)*d+'px) scale(.2)',opacity:0}],{duration:600,easing:'ease-out'}).onfinish=function(){this.effect.target.remove()}}}
+$('.chip').forEach(function(c){c.addEventListener('click',function(e){
+copy(c.getAttribute('data-copy'),c,function(){c.classList.add('done');var l=c.querySelector('small');l.lastChild.nodeValue='';spark(e.clientX||c.getBoundingClientRect().left+40,e.clientY||c.getBoundingClientRect().top+40);setTimeout(function(){c.classList.remove('done');l.lastChild.nodeValue='Copy'},1800)})})});
+$('.copy').forEach(function(b){b.addEventListener('click',function(e){copy(b.previousElementSibling.textContent,b,function(){var o=b.textContent;b.textContent='Copied';spark(e.clientX,e.clientY);setTimeout(function(){b.textContent=o},1400)})})});
+/* spotlight + tilt (rAF throttled, hover devices only) */
+if(HOVER){$('.card').forEach(function(c){var raf=0;c.addEventListener('pointermove',function(e){if(raf)return;raf=requestAnimationFrame(function(){raf=0;var r=c.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;c.style.setProperty('--mx',x+'px');c.style.setProperty('--my',y+'px');if(c.classList.contains('chip')&&!RM)c.style.transform='perspective(800px) rotateX('+((y/r.height-.5)*-6)+'deg) rotateY('+((x/r.width-.5)*6)+'deg)'})});c.addEventListener('pointerleave',function(){c.style.transform=''})});
+if(!RM)$('.mag').forEach(function(b){b.addEventListener('pointermove',function(e){var r=b.getBoundingClientRect();b.style.transform='translate('+((e.clientX-r.left-r.width/2)*.12)+'px,'+((e.clientY-r.top-r.height/2)*.12)+'px)'});b.addEventListener('pointerleave',function(){b.style.transform=''})})}
+/* GSAP: H2 scroll-float + roadmap pin-scrub */
+if(window.gsap&&window.ScrollTrigger&&!RM){
+gsap.registerPlugin(ScrollTrigger);
+$('h2').forEach(function(h){var t=h.textContent;h.setAttribute('aria-label',t);h.innerHTML=t.split(' ').map(function(w){return'<span aria-hidden="true" style="display:inline-block;white-space:nowrap">'+w.split('').map(function(c){return'<span class="c">'+c+'</span>'}).join('')+'</span>'}).join(' ');
+gsap.from(h.querySelectorAll('.c'),{yPercent:90,opacity:0,stagger:.025,duration:.8,ease:'back.out(1.6)',scrollTrigger:{trigger:h,start:'top 85%'}})});
+ScrollTrigger.matchMedia({'(min-width:900px)':function(){
+var steps=$('.step'),num=document.getElementById('num'),bar=document.getElementById('bar'),cur=0;
+ScrollTrigger.create({trigger:'#plan',start:'top top',end:'+='+(steps.length*70)+'%',pin:true,scrub:true,onUpdate:function(s){var i=Math.min(steps.length-1,Math.floor(s.progress*steps.length));if(i===cur)return;cur=i;steps.forEach(function(el,k){el.classList.toggle('on',k===i);el.classList.toggle('past',k<i)});num.textContent=i+1;bar.style.setProperty('--s',(i+1)/steps.length)}})}})}
+/* WebGL contour terrain: one scene, paused off-screen, desktop only */
+var cv=document.getElementById('gl');
+if(window.THREE&&!RM&&innerWidth>=700){
+var R=new THREE.WebGLRenderer({canvas:cv,alpha:true,antialias:true}),S=new THREE.Scene(),C=new THREE.PerspectiveCamera(55,1,.1,100);
+R.setPixelRatio(Math.min(devicePixelRatio,1.5));C.position.set(0,5,9);C.lookAt(0,0,0);
+var g=new THREE.PlaneGeometry(40,24,60,36);g.rotateX(-Math.PI/2);
+var col=getComputedStyle(document.documentElement).getPropertyValue('--route-glow').trim()||'#7FA2FF';
+var m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:new THREE.Color(col),wireframe:true,transparent:true,opacity:.55}));S.add(m);
+var p=g.attributes.position,base=[],i;for(i=0;i<p.count;i++)base.push([p.getX(i),p.getZ(i)]);
+var mx=0,my=0,vis=true,t0=0;
+function rs(){var w=cv.clientWidth,h=cv.clientHeight;R.setSize(w,h,false);C.aspect=w/h;C.updateProjectionMatrix()}rs();addEventListener('resize',rs);
+addEventListener('pointermove',function(e){mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5},{passive:true});
+new IntersectionObserver(function(en){vis=en[0].isIntersecting;if(vis)loop()}).observe(cv);
+function loop(t){if(!vis)return;requestAnimationFrame(loop);t0=(t||0)*.0004;
+for(var k=0;k<p.count;k++){var x=base[k][0],z=base[k][1];p.setY(k,Math.sin(x*.35+t0)*.9+Math.cos(z*.45-t0*.8)*.8+Math.sin((x+z)*.2+t0*.5)*.6)}
+p.needsUpdate=true;C.position.x+=(mx*4-C.position.x)*.04;C.position.y+=(5-my*2-C.position.y)*.04;C.lookAt(0,0,0);R.render(S,C)}
+loop()}
+})();
+</script>
+</body>
+</html>
