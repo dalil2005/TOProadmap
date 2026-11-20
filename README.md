@@ -1,61 +1,163 @@
-# 🧭 TOProadmap
+# TOProadmap
 
-A [Claude](https://claude.ai) skill that turns **"I want to learn or do X"** into a detailed, realistic, stage-by-stage roadmap.
+**Turn any ambition into a clear, actionable plan.**
 
-## What you get
+TOProadmap is a Claude skill that transforms a learning goal, personal ambition, or practical objective into a structured, realistic, stage-by-stage roadmap.
 
-Every roadmap follows the same structure:
+Instead of vague advice or overwhelming lists of resources, it creates a clear path from where you are today to where you want to be.
 
-1. **Snapshot**: goal, assumptions, duration, final outcome
-2. **The big picture**: 4 to 6 stages with time estimates
-3. **Stage-by-stage plan**: objective, what to learn, resources, hands-on project, milestone check, common mistakes
-4. **First 7 days**: a concrete start for today
-5. **Tracking**: how to measure progress and recover when behind
-6. **After the roadmap**: what comes next
+<p align="center">
+  <a href="https://dalil2005.github.io/TOProadmap/"><strong>Live Website</strong></a>
+  &nbsp; · &nbsp;
+  <a href="https://github.com/dalil2005/toproadmap"><strong>Source Code</strong></a>
+  &nbsp; · &nbsp;
+  <a href="LICENSE"><strong>MIT License</strong></a>
+</p>
 
-See [examples/example-roadmap.md](examples/example-roadmap.md) for a sample.
+---
 
-## Install
+## What It Produces
 
-### Claude app
-1. Download [`dist/toproadmap.skill`](dist/toproadmap.skill).
-2. Open **Settings → Capabilities → Skills** and choose **Upload skill**.
-3. Turn it on.
+Every roadmap is built around six essential components:
 
-> Skills need code execution and file creation enabled. Menu names may change over time.
+| Component | What it covers |
+|---|---|
+| **01 — Snapshot** | Your goal, starting assumptions, estimated duration, and expected outcome. |
+| **02 — The Big Picture** | A complete overview divided into 4–6 progressive stages, each with a time estimate. |
+| **03 — Stage-by-Stage Plan** | Learning objectives, essential topics, curated resources, practical projects, milestones, and common mistakes. |
+| **04 — First 7 Days** | A practical first-week action plan so you can start immediately. |
+| **05 — Progress Tracking** | Ways to measure progress, stay consistent, and get back on track when things fall behind. |
+| **06 — What's Next** | Clear directions for continuing beyond the roadmap. |
+
+**A roadmap should do more than tell you what to learn. It should show you what to do next.**
+
+For a complete example, see [`examples/example-roadmap.md`](examples/example-roadmap.md).
+
+---
+
+## Installation
+
+### Claude
+
+1. Download [`dist/toproadmap.skill`](dist/toproadmap.skill) from this repository.
+2. Open **Settings → Capabilities → Skills** in Claude.
+3. Select **Upload skill** and choose the downloaded file.
+4. Enable TOProadmap.
+
+> Requirements: Code execution and file creation must be enabled. Settings and menu names may change between Claude versions.
 
 ### Claude Code
+
+Clone the repository directly into your personal skills directory:
+
 ```bash
-git clone https://github.com/dalil2005/toproadmap ~/.claude/skills/toproadmap
+git clone https://github.com/dalil2005/toproadmap.git ~/.claude/skills/toproadmap
 ```
-For a single project, clone into `.claude/skills/toproadmap` inside it. Restart Claude Code afterwards.
 
-## Use it
+To install it for a single project instead, clone it into:
 
-Just ask. No command needed:
+```text
+.claude/skills/toproadmap
+```
 
-- "I want to learn Python from zero. I have 6 hours a week."
-- "Give me a roadmap to become a UX designer in 8 months."
-- "How do I start running and finish a 10K?"
-- "TOProadmap: launch an online store with a small budget."
+Restart Claude Code after installation.
 
-## Customize
+---
 
-`SKILL.md` is plain Markdown. Edit the structure, tone, or rules to fit how you like your plans.
+## Getting Started
+
+No special commands or complicated configuration required. Simply describe what you want to achieve.
+
+For example:
+
+**Learning a new skill**
+```text
+I want to learn Python from zero.
+I can dedicate 6 hours per week.
+```
+
+**Building a career**
+```text
+Create a roadmap to become a UX designer
+within 8 months.
+```
+
+**Personal development**
+```text
+I want to start running and eventually
+complete my first 10K.
+```
+
+**Launching a project**
+```text
+TOProadmap: Help me launch an online store
+with a small budget.
+```
+
+TOProadmap takes your objective and turns it into a structured plan you can actually follow.
+
+---
+
+## Customization
+
+The skill is built around a simple, editable Markdown file.
+
+Open `SKILL.md` to customize its instructions, roadmap structure, writing style, or planning rules.
+
+Make it more concise, more detailed, more technical, or adapt it to your preferred way of learning and working.
+
+---
+
+## Project Structure
+
+```text
+toproadmap/
+│
+├── SKILL.md                  # Core skill instructions
+│
+├── dist/
+│   └── toproadmap.skill      # Ready-to-install skill package
+│
+├── docs/                     # GitHub Pages landing page
+│
+├── examples/
+│   └── example-roadmap.md    # Example generated roadmap
+│
+└── LICENSE                   # MIT License
+```
+
+---
 
 ## Website
 
-The landing page lives in [`docs/`](docs/). To host it free: **Settings → Pages → Deploy from a branch → `main` / `/docs`**.
+The project landing page is available here:
 
-## Repo layout
+**[dalil2005.github.io/TOProadmap](https://dalil2005.github.io/TOProadmap/)**
 
-```
-SKILL.md        the skill itself
-dist/           ready-to-upload toproadmap.skill
-docs/           landing page (GitHub Pages)
-examples/       sample output
-```
+To deploy your own version using GitHub Pages:
+
+1. Open your repository's **Settings**.
+2. Navigate to **Pages**.
+3. Select **Deploy from a branch**.
+4. Choose `main` as the branch and `/docs` as the folder.
+5. Save your settings.
+
+---
 
 ## License
 
-[MIT](LICENSE)
+Distributed under the [MIT License](LICENSE).
+
+Copyright (c) 2026 Kaddour Cherif Zakaria Dalil.
+
+You are free to use, modify, distribute, and build upon this project under the terms of the license.
+
+---
+
+<p align="center">
+  <strong>TOProadmap</strong>
+  <br />
+  <sub>Less guessing. More direction. Real progress.</sub>
+  <br /><br />
+  Created by <a href="https://github.com/dalil2005">Kaddour Cherif Zakaria Dalil</a>
+</p>
